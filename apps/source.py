@@ -20,6 +20,8 @@ artistCorresp = {
 "Roselia": "Roselia",
 "Poppin'Party": "Poppin'Party"
 }
+ffplay_path = r"bin\ffplay"
+ffplay_path = r"ffplay"
 
 def get_proxy():
     if "--proxy" in argv:
@@ -194,7 +196,9 @@ def playAudio(d):
         i = 0
     else:
         i = int(i)
-    system("start cmd /c bin\\ffplay "+d["data"]["audio"][i]["url"]+" -loop 0")
+    url = d["data"]["audio"][i]["url"]
+    print(url)
+    system("start cmd /c " + ffplay_path + " "+url+" -loop 0")
     global_proxy = _global_proxy
 
 def _console(i=None):
