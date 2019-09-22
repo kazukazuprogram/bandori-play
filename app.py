@@ -16,45 +16,48 @@ import winreg
 baseurl = "https://bandori.fandom.com"
 downloadBasePath = join(environ["homepath"], "BandoriWiki")
 artistCorresp = {
-"Hello, Happy World!": "ハロー、ハッピーワールド!",
-"Roselia": "Roselia",
-"Poppin'Party": "Poppin'Party"
+    "Hello, Happy World!": "ハロー、ハッピーワールド!",
+    "Pastel*Palettes": "Pastel✽Palettes"
 }
 ffplay_path = r"bin\ffplay"
-ffplay_path = r"ffplay"
+# ffplay_path = r"ffplay"
+
 
 def get_proxy():
     if "--proxy" in argv:
         try:
-            p = argv[argv.index("--proxy")+1]
+            p = argv[argv.index("--proxy") + 1]
             global_proxy = {
-            "http": p,
-            "https": p
+                "http": p,
+                "https": p
             }
-            print("Option  : Using proxy \""+p+"\"")
+            print("Option  : Using proxy \"" + p + "\"")
         except IndexError:
             print("Warning: The proxy has been disabled because the \"--proxy\" option was specified but no value was entered")
     elif "--disable-proxy" in argv:
         return None
     elif "http_proxy" in [x.lower() for x in list(environ.keys())]:
         global_proxy = {
-        "http": environ["http_proxy"].replace("http://", "").replace("/", ""),
-        "https": environ["https_proxy"].replace("https:", "").replace("http:", "").replace("/", "")
+            "http": environ["http_proxy"].replace("http://", "").replace("/", ""),
+            "https": environ["https_proxy"].replace("https:", "").replace("http:", "").replace("/", "")
         }
         print("Option  : Using proxy", str(global_proxy), "(environ)")
     elif "https_proxy" in [x.lower() for x in list(environ.keys())]:
         global_proxy = {
-        "http": environ["https_proxy"].replace("http://", "").replace("/", ""),
-        "https": environ["https_proxy"].replace("https://", "").replace("/", "")
+            "http": environ["https_proxy"].replace("http://", "").replace("/", ""),
+            "https": environ["https_proxy"].replace("https://", "").replace("/", "")
         }
-        print("Option  : Using proxy \""+global_proxy["http"]+"\" (environ)")
-    elif False: # netshでプロキシの存在を確認できないため将来的に実装予定
-        p = check_output("netsh winhttp show proxy").decode("sjis").replace("\r\n", "\n").split("\n")[3].split(":", 1)[1].replace(" ", "")
+        print("Option  : Using proxy \"" +
+              global_proxy["http"] + "\" (environ)")
+    elif False:  # netshでプロキシの存在を確認できないため将来的に実装予定
+        p = check_output("netsh winhttp show proxy").decode("sjis").replace(
+            "\r\n", "\n").split("\n")[3].split(":", 1)[1].replace(" ", "")
         global_proxy = {
-        "http": p,
-        "https": p
+            "http": p,
+            "https": p
         }
-        print("Option  : Using proxy \"" + global_proxy["http"] + "\" (netsh winhttp)")
+        print("Option  : Using proxy \"" +
+              global_proxy["http"] + "\" (netsh winhttp)")
     else:
         path = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
         key = winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, path)
@@ -64,17 +67,18 @@ def get_proxy():
         winreg.CloseKey(key)  # key.Close() と書いても同じ
         if bool(e):
             global_proxy = {
-            "http": p,
-            "https": p
+                "http": p,
+                "https": p
             }
-            print("Option  : Using proxy \""+global_proxy["http"]+"\" (System Setting)")
+            print("Option  : Using proxy \"" +
+                  global_proxy["http"] + "\" (System Setting)")
         else:
             global_proxy = None
     return global_proxy
 
-# 楽曲一覧を取得
 def getSongList(s=Session()):
-    g = s.get(baseurl+"/wiki/BanG_Dream!_Girls_Band_Party!/Playable_Songs", proxies=global_proxy)
+    g = s.get(baseurl + "/wiki/BanG_Dream!_Girls_Band_Party!/Playable_Songs",
+              proxies=global_proxy)
     f = bs(g.text, "lxml")
     f = f.find("div", class_="mw-content-text").find_all("table")
     l = list()
@@ -82,25 +86,26 @@ def getSongList(s=Session()):
         lt = list()
         for y in x.find_all("a"):
             lt.append({
-            "title": y.get("title"),
-            "url": y.get("href"),
+                "title": y.get("title"),
+                "url": y.get("href"),
             })
         l += lt
     return l
 
+
 def getSongInfo(url, s=Session()):
-    g = s.get(baseurl+url, proxies=global_proxy)
+    g = s.get(baseurl + url, proxies=global_proxy)
     f = bs(g.text, "lxml")
     audio = list()
     for x in f.find("table", class_="article-table").find_all("tr")[1:]:
         t = x.find_all("td")
-        title = t[1].text.replace("\n","")
+        title = t[1].text.replace("\n", "")
         audio.append({
-        "title": title,
-        "length": t[2].text.replace("\n", ""),
-        "url": x.find("span", class_="ogg_custom").button.get("onclick").split("rl\":\"")[1].split("\",\"")[0],
-        "inst": "instrumental" in title,
-        "gamever": "(Game Version)" in title
+            "title": title,
+            "length": t[2].text.replace("\n", ""),
+            "url": x.find("span", class_="ogg_custom").button.get("onclick").split("rl\":\"")[1].split("\",\"")[0],
+            "inst": "instrumental" in title,
+            "gamever": "(Game Version)" in title
         })
         del title
     try:
@@ -111,30 +116,33 @@ def getSongInfo(url, s=Session()):
         except:
             title = f.find("div", class_="page-header__main").h1.text
     try:
-        artist = artistCorresp[f.find("div", class_="mw-content-text").p.find_all("a")[-1].text]
+        artist = artistCorresp[f.find(
+            "div", class_="mw-content-text").p.find_all("a")[-1].text]
     except:
-        artist = f.find("div", class_="mw-content-text").p.find_all("a")[-1].text
+        artist = f.find(
+            "div", class_="mw-content-text").p.find_all("a")[-1].text
     try:
-        bpm = int(f.find("div", class_="mw-content-text").find("div", style="float:left;")\
-            .find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", ""))
+        bpm = int(f.find("div", class_="mw-content-text").find("div", style="float:left;")
+                  .find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", ""))
     except:
         try:
             bpm = f.find("div", class_="mw-content-text").find("div", style="float:left;")\
-                .find_all("table")[2].tr.find_all("td")[1].text.replace("\n","").replace(" BPM","").replace(" ~ ","-")
+                .find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", "").replace(" ~ ", "-")
         except:
             bpm = "Unacquirable"
             stderr.write("Error: BPM unacquirable.\n")
     info = {
-    "title": title,
-    "artwork": f.find("a", class_="image-thumbnail").get("href"),
-    "bpm": bpm,
-    "audio": audio,
-    "artist": artist
+        "title": title,
+        "artwork": f.find("a", class_="image-thumbnail").get("href"),
+        "bpm": bpm,
+        "audio": audio,
+        "artist": artist
     }
     return info
 
+
 def suggestSearch(q, s=Session()):
-    g = s.get(baseurl+"/index.php", params={
+    g = s.get(baseurl + "/index.php", params={
         "action": "ajax",
         "rs": "getLinkSuggest",
         "format": "json",
@@ -142,6 +150,7 @@ def suggestSearch(q, s=Session()):
     }, proxies=global_proxy)
     l = loads(g.text)
     return l["suggestions"]
+
 
 def searchAudio(q, s=Session()):
     if q == "q" or q is None or len(q) == 0:
@@ -151,26 +160,29 @@ def searchAudio(q, s=Session()):
     if len(sug) != 0:
         n = 0
         for x in sug:
-            print(n, "\t"+x)
+            print(n, "\t" + x)
             n += 1
     else:
-        if s.get(baseurl+"/wiki/"+q).status_code != 404:
-            r = "/wiki/"+q
+        if s.get(baseurl + "/wiki/" + q).status_code != 404:
+            r = "/wiki/" + q
             ss = False
         else:
             print("No hit.")
-            searchAudio(q=input("search>"), s=s)
+            return False
     if ss:
         i = input("Whitch?[0] : ")
         if len(i) == 0:
             i = 0
+        elif i.lower() == "q":
+            return False
         else:
             i = int(i)
-        r = "/wiki/"+sug[i]
+        r = "/wiki/" + sug[i]
     info = getSongInfo(r, s=s)
     print("Title : \t", info["title"])
     print("Artist :\t", info["artist"])
     return info
+
 
 def playAudio(d):
     global global_proxy
@@ -189,7 +201,7 @@ def playAudio(d):
     print("Artist :\t", d["data"]["artist"])
     n = 0
     for x in d["data"]["audio"]:
-        print(n, "\t"+x["title"])
+        print(n, "\t" + x["title"])
         n += 1
     i = input("Whitch?[0] : ")
     if len(i) == 0:
@@ -198,8 +210,9 @@ def playAudio(d):
         i = int(i)
     url = d["data"]["audio"][i]["url"]
     print(url)
-    system("start cmd /c " + ffplay_path + " "+url+" -loop 0")
+    system("start cmd /c " + ffplay_path + " " + url + " -loop 0")
     global_proxy = _global_proxy
+
 
 def _console(i=None):
     global current
@@ -214,7 +227,10 @@ def _console(i=None):
             q = " ".join(i[1:])
         else:
             q = input("search>")
-        current["data"] = searchAudio(q=q)
+        d = searchAudio(q=q)
+        if d == False:
+            return d
+        current["data"] = d
         current["set"] = True
     elif i[0].lower() in ["play", "p"]:
         if not current["set"]:
@@ -242,12 +258,13 @@ def _console(i=None):
     else:
         print("Unknown command:", i[0])
 
+
 def downloadAudio(d, num=None, s=Session()):
     print("Title : \t", d["data"]["title"])
     print("Artist :\t", d["data"]["artist"])
     n = 0
     for x in d["data"]["audio"]:
-        print(n, "\t"+x["title"])
+        print(n, "\t" + x["title"])
         n += 1
     while True:
         try:
@@ -275,6 +292,7 @@ def downloadAudio(d, num=None, s=Session()):
         with s.get(d["data"]["audio"][i]["url"], proxies=global_proxy) as g:
             fp.write(g.content)
 
+
 def console():
     global current
     current = {"set": False, "data": {}}
@@ -282,6 +300,7 @@ def console():
         cr = _console()
         if cr:
             return cr
+
 
 if __name__ == "__main__":
     global_proxy = get_proxy()
