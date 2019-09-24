@@ -12,6 +12,7 @@ from sys import argv
 from subprocess import check_output
 from sys import stderr
 import winreg
+from pprint import pprint
 
 baseurl = "https://bandori.fandom.com"
 downloadBasePath = join(environ["homepath"], "BandoriWiki")
@@ -117,10 +118,10 @@ def getSongInfo(url, s=Session()):
             title = f.find("div", class_="page-header__main").h1.text
     try:
         artist = artistCorresp[f.find(
-            "div", class_="mw-content-text").p.find_all("a")[-1].text]
+        "div", class_="mw-content-text").p.find_all("a")[0].text]
     except:
         artist = f.find(
-            "div", class_="mw-content-text").p.find_all("a")[-1].text
+            "div", class_="mw-content-text").p.find_all("a")[0].text
     try:
         bpm = int(f.find("div", class_="mw-content-text").find("div", style="float:left;")
                   .find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", ""))
@@ -184,7 +185,7 @@ def searchAudio(q, s=Session()):
     return info
 
 
-def playAudio(d):
+def playAudio(d, num=None):
     global global_proxy
     if global_proxy is None:
         _global_proxy = None
@@ -199,64 +200,22 @@ def playAudio(d):
         environ["https_proxy"] = global_proxy["https"]
     print("Title : \t", d["data"]["title"])
     print("Artist :\t", d["data"]["artist"])
-    n = 0
-    for x in d["data"]["audio"]:
-        print(n, "\t" + x["title"])
-        n += 1
-    i = input("Whitch?[0] : ")
-    if len(i) == 0:
-        i = 0
+    if num is not None:
+        n = 0
+        for x in d["data"]["audio"]:
+            print(n, "\t" + x["title"])
+            n += 1
+        i = input("Whitch?[0] : ")
+        if len(i) == 0:
+            i = 0
+        else:
+            i = int(i)
     else:
-        i = int(i)
+        i = num
     url = d["data"]["audio"][i]["url"]
     print(url)
     system("start cmd /c " + ffplay_path + " " + url + " -loop 0")
     global_proxy = _global_proxy
-
-
-def _console(i=None):
-    global current
-    if i is None:
-        i = input("bandoriwiki>").split(" ")
-    while "" in i:
-        i.remove("")
-    if len(i) == 0:
-        return False
-    elif i[0].lower() in ["search", "s"]:
-        if len(i) >= 2:
-            q = " ".join(i[1:])
-        else:
-            q = input("search>")
-        d = searchAudio(q=q)
-        if d == False:
-            return d
-        current["data"] = d
-        current["set"] = True
-    elif i[0].lower() in ["play", "p"]:
-        if not current["set"]:
-            print("Error: Please set current song.")
-        else:
-            playAudio(current)
-    elif i[0].lower() in ["download", "d"]:
-        if not current["set"]:
-            print("Error: Please set current song.")
-        else:
-            if len(i) == 1:
-                n = None
-            else:
-                try:
-                    n = int(i[1])
-                except:
-                    n = None
-            downloadAudio(current, num=n)
-    elif i[0].lower() == "print":
-        print(global_proxy)
-    elif i[0].lower() == "clear":
-        current = {"set": False, "data": {}}
-    elif i[0].lower() in ["quit", "exit", "q"]:
-        return True
-    else:
-        print("Unknown command:", i[0])
 
 
 def downloadAudio(d, num=None, s=Session()):
@@ -276,7 +235,7 @@ def downloadAudio(d, num=None, s=Session()):
             else:
                 i = int(i)
             break
-        except:
+        except ValueError:
             print("Please enter number")
     print("Download :", d["data"]["audio"][i]["url"])
     path = downloadBasePath
@@ -291,6 +250,60 @@ def downloadAudio(d, num=None, s=Session()):
     with open(join(path, filename), "wb") as fp:
         with s.get(d["data"]["audio"][i]["url"], proxies=global_proxy) as g:
             fp.write(g.content)
+
+
+def _console(i=None):
+    global current
+    if i is None:
+        i = input("bandoriwiki>").split(" ")
+    while "" in i:
+        i.remove("")
+    if len(i) == 0:
+        return False
+    elif i[0].lower() in ["search", "s"]:
+        if len(i) >= 2:
+            q = " ".join(i[1:])
+        else:
+            q = input("search>")
+        d = searchAudio(q=q)
+        if d is False:
+            return d
+        current["data"] = d
+        current["set"] = True
+    elif i[0].lower() in ["play", "p"]:
+        if not current["set"]:
+            print("Error: Please set current song.")
+        else:
+            if len(i) == 1:
+                playAudio(current)
+            else:
+                try:
+                    print("TRY :", i[1])
+                    playAudio(current, num=int(i[1]))
+                except ValueError:
+                    playAudio(current)
+    elif i[0].lower() in ["download", "d"]:
+        if not current["set"]:
+            print("Error: Please set current song.")
+        else:
+            if len(i) == 1:
+                n = None
+            else:
+                try:
+                    n = int(i[1])
+                except ValueError:
+                    n = None
+            downloadAudio(current, num=n)
+    elif i[0].lower() == "showproxy":
+        print(global_proxy)
+    elif i[0].lower() == "showurl":
+        pprint(current)
+    elif i[0].lower() == "clear":
+        current = {"set": False, "data": {}}
+    elif i[0].lower() in ["quit", "exit", "q"]:
+        return True
+    else:
+        print("Unknown command:", i[0])
 
 
 def console():
