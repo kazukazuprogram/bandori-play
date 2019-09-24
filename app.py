@@ -48,8 +48,8 @@ def get_proxy():
             "http": environ["https_proxy"].replace("http://", "").replace("/", ""),
             "https": environ["https_proxy"].replace("https://", "").replace("/", "")
         }
-        print("Option  : Using proxy \"" +
-              global_proxy["http"] + "\" (environ)")
+        print("Option  : Using proxy \""
+              + global_proxy["http"] + "\" (environ)")
     elif False:  # netshでプロキシの存在を確認できないため将来的に実装予定
         p = check_output("netsh winhttp show proxy").decode("sjis").replace(
             "\r\n", "\n").split("\n")[3].split(":", 1)[1].replace(" ", "")
@@ -57,8 +57,8 @@ def get_proxy():
             "http": p,
             "https": p
         }
-        print("Option  : Using proxy \"" +
-              global_proxy["http"] + "\" (netsh winhttp)")
+        print("Option  : Using proxy \""
+              + global_proxy["http"] + "\" (netsh winhttp)")
     else:
         path = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
         key = winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, path)
@@ -71,18 +71,18 @@ def get_proxy():
                 "http": p,
                 "https": p
             }
-            print("Option  : Using proxy \"" +
-                  global_proxy["http"] + "\" (System Setting)")
+            print("Option  : Using proxy \"" + global_proxy["http"] + "\" (System Setting)")
         else:
             global_proxy = None
     return global_proxy
+
 
 def getSongList(s=Session()):
     g = s.get(baseurl + "/wiki/BanG_Dream!_Girls_Band_Party!/Playable_Songs",
               proxies=global_proxy)
     f = bs(g.text, "lxml")
     f = f.find("div", class_="mw-content-text").find_all("table")
-    l = list()
+    songlist = list()
     for x in f:
         lt = list()
         for y in x.find_all("a"):
@@ -90,8 +90,8 @@ def getSongList(s=Session()):
                 "title": y.get("title"),
                 "url": y.get("href"),
             })
-        l += lt
-    return l
+        songlist += lt
+    return songlist
 
 
 def getSongInfo(url, s=Session()):
@@ -111,25 +111,24 @@ def getSongInfo(url, s=Session()):
         del title
     try:
         title = f.find("div", class_="mw-content-text").i.span.text
-    except:
+    except AttributeError:
         try:
             title = f.find("div", class_="pi-data-value pi-font").text
-        except:
+        except AttributeError:
             title = f.find("div", class_="page-header__main").h1.text
     try:
         artist = artistCorresp[f.find(
-        "div", class_="mw-content-text").p.find_all("a")[0].text]
-    except:
+            "div", class_="mw-content-text").p.find_all("a")[0].text]
+    except KeyError:
         artist = f.find(
             "div", class_="mw-content-text").p.find_all("a")[0].text
     try:
-        bpm = int(f.find("div", class_="mw-content-text").find("div", style="float:left;")
-                  .find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", ""))
-    except:
+        bpm = int(f.find("div", class_="mw-content-text").find("div", style="float:left;").find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", ""))
+    except AttributeError:
         try:
             bpm = f.find("div", class_="mw-content-text").find("div", style="float:left;")\
                 .find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", "").replace(" ~ ", "-")
-        except:
+        except AttributeError:
             bpm = "Unacquirable"
             stderr.write("Error: BPM unacquirable.\n")
     info = {
@@ -149,8 +148,7 @@ def suggestSearch(q, s=Session()):
         "format": "json",
         "query": q
     }, proxies=global_proxy)
-    l = loads(g.text)
-    return l["suggestions"]
+    return loads(g.text)["suggestions"]
 
 
 def searchAudio(q, s=Session()):
@@ -200,7 +198,7 @@ def playAudio(d, num=None):
         environ["https_proxy"] = global_proxy["https"]
     print("Title : \t", d["data"]["title"])
     print("Artist :\t", d["data"]["artist"])
-    if num is not None:
+    if num is None:
         n = 0
         for x in d["data"]["audio"]:
             print(n, "\t" + x["title"])
@@ -211,9 +209,9 @@ def playAudio(d, num=None):
         else:
             i = int(i)
     else:
-        i = num
+        i = int(num)
     url = d["data"]["audio"][i]["url"]
-    print(url)
+    print("URL :", url)
     system("start cmd /c " + ffplay_path + " " + url + " -loop 0")
     global_proxy = _global_proxy
 
