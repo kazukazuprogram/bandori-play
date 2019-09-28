@@ -28,7 +28,7 @@ def get_proxy():
     if "--proxy" in argv:
         try:
             p = argv[argv.index("--proxy") + 1]
-            global_proxy = {
+            proxy = {
                 "http": p,
                 "https": p
             }
@@ -38,27 +38,27 @@ def get_proxy():
     elif "--disable-proxy" in argv:
         return None
     elif "http_proxy" in [x.lower() for x in list(environ.keys())]:
-        global_proxy = {
+        proxy = {
             "http": environ["http_proxy"].replace("http://", "").replace("/", ""),
             "https": environ["https_proxy"].replace("https:", "").replace("http:", "").replace("/", "")
         }
-        print("Option  : Using proxy", str(global_proxy), "(environ)")
+        print("Option  : Using proxy", str(proxy), "(environ)")
     elif "https_proxy" in [x.lower() for x in list(environ.keys())]:
-        global_proxy = {
+        proxy = {
             "http": environ["https_proxy"].replace("http://", "").replace("/", ""),
             "https": environ["https_proxy"].replace("https://", "").replace("/", "")
         }
         print("Option  : Using proxy \""
-              + global_proxy["http"] + "\" (environ)")
+              + proxy["http"] + "\" (environ)")
     elif False:  # netshでプロキシの存在を確認できないため将来的に実装予定
         p = check_output("netsh winhttp show proxy").decode("sjis").replace(
             "\r\n", "\n").split("\n")[3].split(":", 1)[1].replace(" ", "")
-        global_proxy = {
+        proxy = {
             "http": p,
             "https": p
         }
         print("Option  : Using proxy \""
-              + global_proxy["http"] + "\" (netsh winhttp)")
+              + proxy["http"] + "\" (netsh winhttp)")
     else:
         path = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
         key = winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, path)
@@ -67,14 +67,14 @@ def get_proxy():
         e = bool(e)
         winreg.CloseKey(key)  # key.Close() と書いても同じ
         if bool(e):
-            global_proxy = {
+            proxy = {
                 "http": p,
                 "https": p
             }
-            print("Option  : Using proxy \"" + global_proxy["http"] + "\" (System Setting)")
+            print("Option  : Using proxy \"" + proxy["http"] + "\" (System Setting)")
         else:
-            global_proxy = None
-    return global_proxy
+            proxy = None
+    return proxy
 
 
 def getSongList(s=Session()):
@@ -313,6 +313,13 @@ def console():
             return cr
 
 
-if __name__ == "__main__":
+def start():
+    global global_proxy
     global_proxy = get_proxy()
     console()
+
+
+if __name__ == "__main__":
+    # global_proxy = get_proxy()
+    # console()
+    start()
