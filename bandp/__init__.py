@@ -4,12 +4,11 @@
 from requests import Session
 from bs4 import BeautifulSoup as bs
 from os import environ
-from os.path import join, isdir
+from os.path import join, isdir, split
 from os import makedirs as mkdir
 from json import loads
 from os import system
 from sys import argv
-from subprocess import check_output
 from sys import stderr
 import winreg
 from pprint import pprint
@@ -20,9 +19,9 @@ artistCorresp = {
     "Hello, Happy World!": "ハロー、ハッピーワールド!",
     "Pastel*Palettes": "Pastel✽Palettes"
 }
-ffplay_path = r"bin\ffplay"
 # ffplay_path = r"ffplay"
-
+ffplay_path = join("bin", "ffplay.exe")
+ffplay_path = join(split(__file__)[0], ffplay_path)
 
 def get_proxy():
     if "--proxy" in argv:
@@ -50,15 +49,6 @@ def get_proxy():
         }
         print("Option  : Using proxy \""
               + proxy["http"] + "\" (environ)")
-    elif False:  # netshでプロキシの存在を確認できないため将来的に実装予定
-        p = check_output("netsh winhttp show proxy").decode("sjis").replace(
-            "\r\n", "\n").split("\n")[3].split(":", 1)[1].replace(" ", "")
-        proxy = {
-            "http": p,
-            "https": p
-        }
-        print("Option  : Using proxy \""
-              + proxy["http"] + "\" (netsh winhttp)")
     else:
         path = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
         key = winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, path)
@@ -169,13 +159,18 @@ def searchAudio(q, s=Session()):
             print("No hit.")
             return False
     if ss:
-        i = input("Whitch?[0] : ")
-        if len(i) == 0:
-            i = 0
-        elif i.lower() == "q":
-            return False
-        else:
-            i = int(i)
+        while True:
+            try:
+                i = input("Whitch?[0] : ")
+                if len(i) == 0:
+                    i = 0
+                elif i.lower() == "q":
+                    return False
+                else:
+                    i = int(i)
+                break
+            except ValueError:
+                print("Please enter valid number.")
         r = "/wiki/" + sug[i]
     info = getSongInfo(r, s=s)
     print("Title : \t", info["title"])
@@ -212,7 +207,7 @@ def playAudio(d, num=None):
         i = int(num)
     url = d["data"]["audio"][i]["url"]
     print("URL :", url)
-    system("start cmd /c " + ffplay_path + " " + url + " -loop 0")
+    system("start cmd /c " +ffplay_path + " " + url + " -loop 0")
     global_proxy = _global_proxy
 
 
@@ -253,7 +248,7 @@ def downloadAudio(d, num=None, s=Session()):
 def _console(i=None):
     global current
     if i is None:
-        i = input("bandoriwiki>").split(" ")
+        i = input("bandoriplay>").split(" ")
     while "" in i:
         i.remove("")
     if len(i) == 0:
@@ -295,7 +290,9 @@ def _console(i=None):
     elif i[0].lower() == "showproxy":
         print(global_proxy)
     elif i[0].lower() == "showurl":
-        pprint(current)
+        print("Status :", "set" if current["set"] else "not set")
+        return
+        pprint(current["data"])
     elif i[0].lower() == "clear":
         current = {"set": False, "data": {}}
     elif i[0].lower() in ["quit", "exit", "q"]:
@@ -320,6 +317,4 @@ def start():
 
 
 if __name__ == "__main__":
-    # global_proxy = get_proxy()
-    # console()
     start()
