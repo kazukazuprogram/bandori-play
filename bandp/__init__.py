@@ -12,6 +12,9 @@ from sys import argv
 from sys import stderr
 import winreg
 from pprint import pprint
+from ctypes import windll
+from threading import Thread
+from subprocess import Popen, DEVNULL
 
 baseurl = "https://bandori.fandom.com"
 downloadBasePath = join(environ["homepath"], "BandoriWiki")
@@ -22,6 +25,35 @@ artistCorresp = {
 # ffplay_path = r"ffplay"
 ffplay_path = join("bin", "ffplay.exe")
 ffplay_path = join(split(__file__)[0], ffplay_path)
+appname = "BanG Dream Music Player"
+
+class Player():
+    def __init__(self, url=None):
+        self.url = url
+        self.ps = None
+
+    def setURL(self, url):
+        self.url = url
+
+    def waitFunc(self):
+        self.wait()
+        self.playing = False
+
+    def play(self):
+        if not self.url:
+            return
+        self.command = "ffplay -i {} -autoexit -nodisp".format(self.url).split()
+        self.ps = Popen(self.command, stderr=DEVNULL)
+        self.wait = self.ps.wait
+        self.playing = True
+        self.waitThread = Thread(target=self.waitFunc)
+        self.waitThread.start()
+
+    def stop(self):
+        if not self.ps:
+            return
+        self.ps.terminate()
+        self.ps = None
 
 def get_proxy():
     if "--proxy" in argv:
@@ -61,7 +93,8 @@ def get_proxy():
                 "http": p,
                 "https": p
             }
-            print("Option  : Using proxy \"" + proxy["http"] + "\" (System Setting)")
+            print("Option  : Using proxy \"" +
+                  proxy["http"] + "\" (System Setting)")
         else:
             proxy = None
     return proxy
@@ -113,7 +146,8 @@ def getSongInfo(url, s=Session()):
         artist = f.find(
             "div", class_="mw-content-text").p.find_all("a")[0].text
     try:
-        bpm = int(f.find("div", class_="mw-content-text").find("div", style="float:left;").find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", ""))
+        _bpm = f.find("div", class_="mw-content-text").find("div", style="float:left;").find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", "")
+        bpm = int(_bpm)
     except AttributeError:
         try:
             bpm = f.find("div", class_="mw-content-text").find("div", style="float:left;")\
@@ -121,6 +155,8 @@ def getSongInfo(url, s=Session()):
         except AttributeError:
             bpm = "Unacquirable"
             stderr.write("Error: BPM unacquirable.\n")
+    except ValueError:
+        bpm = _bpm
     info = {
         "title": title,
         "artwork": f.find("a", class_="image-thumbnail").get("href"),
@@ -207,9 +243,12 @@ def playAudio(d, num=None):
         i = int(num)
     url = d["data"]["audio"][i]["url"]
     print("URL :", url)
-    system("start cmd /c " +ffplay_path + " " + url + " -loop 0")
     global_proxy = _global_proxy
-
+    windowtitle = "Playing \""+ d["data"]["title"] +"\"."
+    print(windowtitle)
+    windll.kernel32.SetConsoleTitleW("Playing \""+ d["data"]["title"] +"\".")
+    player.setURL(url)
+    player.play()
 
 def downloadAudio(d, num=None, s=Session()):
     print("Title : \t", d["data"]["title"])
@@ -247,6 +286,7 @@ def downloadAudio(d, num=None, s=Session()):
 
 def _console(i=None):
     global current
+    windll.kernel32.SetConsoleTitleW(appname)
     if i is None:
         i = input("bandoriplay>").split(" ")
     while "" in i:
@@ -271,7 +311,6 @@ def _console(i=None):
                 playAudio(current)
             else:
                 try:
-                    print("TRY :", i[1])
                     playAudio(current, num=int(i[1]))
                 except ValueError:
                     playAudio(current)
@@ -287,6 +326,9 @@ def _console(i=None):
                 except ValueError:
                     n = None
             downloadAudio(current, num=n)
+    elif i[0].lower() == "stop":
+        player.stop()
+        windll.kernel32.SetConsoleTitleW(appname)
     elif i[0].lower() == "showproxy":
         print(global_proxy)
     elif i[0].lower() == "showurl":
@@ -296,6 +338,8 @@ def _console(i=None):
     elif i[0].lower() == "clear":
         current = {"set": False, "data": {}}
     elif i[0].lower() in ["quit", "exit", "q"]:
+        player.stop()
+        print("Bye.")
         return True
     else:
         print("Unknown command:", i[0])
@@ -312,7 +356,9 @@ def console():
 
 def start():
     global global_proxy
+    global player
     global_proxy = get_proxy()
+    player = Player()
     console()
 
 

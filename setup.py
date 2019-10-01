@@ -20,7 +20,3 @@ setup(
         ]
     }
 )
-
-import bandp
-# print(input())
-# bandp.start()
