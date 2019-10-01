@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name="bandp",
+    name="bandori_play",
     version="0.0.0",
     description="Play and download bandori's music.",
     author="kazukazuprogram",
@@ -12,11 +12,11 @@ setup(
     install_requires=["requests", "bs4"],
     packages=find_packages(),
     license="MIT",
-    package_dir={"bandp": "bandp"},
-    package_data={"bandp": ["bin\\*.exe"]},
+    package_dir={"bandori_play": "bandori_play"},
+    package_data={"bandori_play": ["bin\\*.exe"]},
     entry_points={
         "console_scripts": [
-            "bandp = bandp.__init__:start",
+            "bandp = bandori_play.__init__:start",
         ]
     }
 )

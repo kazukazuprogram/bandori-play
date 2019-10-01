@@ -3,7 +3,7 @@
 
 from requests import Session
 from bs4 import BeautifulSoup as bs
-from os import environ
+from os import environ, system
 from os.path import join, isdir, split
 from os import makedirs as mkdir
 from json import loads
@@ -21,16 +21,19 @@ artistCorresp = {
     "Hello, Happy World!": "ハロー、ハッピーワールド!",
     "Pastel*Palettes": "Pastel✽Palettes"
 }
-# ffplay_path = r"ffplay"
 ffplay_path = join("bin", "ffplay.exe")
 ffplay_path = join(split(__file__)[0], ffplay_path)
 appname = "BanG Dream Music Player"
+play_legacy = False
+console_string = "bandoriplay>"
+
 
 class Player():
     def __init__(self, url=None):
         self.url = url
         self.ps = None
         self.playing = False
+        self.loop = False
 
     def setURL(self, url):
         self.url = url
@@ -38,28 +41,36 @@ class Player():
     def waitFunc(self):
         self.wait()
         self.playing = False
+        if self.loop:
+            self.play()
 
-    def play(self):
+    def play(self, url=None):
+        if url:
+            self.setURL(url)
         if not self.url:
             return
         if self.playing:
             self.stop()
-        self.command = "ffplay -i {} -autoexit -nodisp".format(self.url).split()
+        self.command = "ffplay -i {} -nodisp -autoexit".format(self.url)
         envcopy = environ.copy()
         if global_proxy is not None:
             envcopy["http_proxy"] = global_proxy["http"]
             envcopy["https_proxy"] = global_proxy["https"]
-        self.ps = Popen(self.command, stderr=DEVNULL, env=envcopy)
-        self.wait = self.ps.wait
-        self.playing = True
-        self.waitThread = Thread(target=self.waitFunc)
-        self.waitThread.start()
+        if play_legacy:
+            system(self.command)
+        else:
+            self.ps = Popen(self.command.split(), stderr=DEVNULL, env=envcopy)
+            self.wait = self.ps.wait
+            self.playing = True
+            self.waitThread = Thread(target=self.waitFunc)
+            self.waitThread.start()
 
     def stop(self):
         if not self.ps:
             return
         self.ps.terminate()
         self.ps = None
+
 
 def get_proxy():
     if "--proxy" in argv:
@@ -72,6 +83,7 @@ def get_proxy():
             print("Option  : Using proxy \"" + p + "\"")
         except IndexError:
             print("Warning: The proxy has been disabled because the \"--proxy\" option was specified but no value was entered")
+            pass
     elif "--disable-proxy" in argv:
         return None
     elif "http_proxy" in [x.lower() for x in list(environ.keys())]:
@@ -85,8 +97,7 @@ def get_proxy():
             "http": environ["https_proxy"].replace("http://", "").replace("/", ""),
             "https": environ["https_proxy"].replace("https://", "").replace("/", "")
         }
-        print("Option  : Using proxy \""
-              + proxy["http"] + "\" (environ)")
+        print("Option  : Using proxy \"" + proxy["http"] + "\" (environ)")
     else:
         path = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
         key = winreg.OpenKeyEx(winreg.HKEY_CURRENT_USER, path)
@@ -99,8 +110,7 @@ def get_proxy():
                 "http": p,
                 "https": p
             }
-            print("Option  : Using proxy \"" +
-                  proxy["http"] + "\" (System Setting)")
+            print("Option  : Using proxy \"" + proxy["http"] + "\" (System Setting)")
         else:
             proxy = None
     return proxy
@@ -165,7 +175,6 @@ def getSongInfo(url, s=Session()):
                 stderr.write("Error: BPM unacquirable.\n")
     except ValueError:
         bpm = _bpm
-    # print("BPM :", bpm)
     info = {
         "title": title,
         "artwork": f.find("a", class_="image-thumbnail").get("href"),
@@ -216,6 +225,7 @@ def searchAudio(q, s=Session()):
                 break
             except ValueError:
                 print("Please enter valid number.")
+                pass
         r = "/wiki/" + sug[i]
     info = getSongInfo(r, s=s)
     print("Title : \t", info["title"])
@@ -252,12 +262,12 @@ def playAudio(d, num=None):
         i = int(num)
     url = d["data"]["audio"][i]["url"]
     global_proxy = _global_proxy
-    windowtitle = appname + "Playing \""+ d["data"]["title"] +"\"."
-    print(windowtitle)
-    windll.kernel32.SetConsoleTitleW("Playing \""+ d["data"]["title"] +"\".")
+    windowtitle = appname + " : Playing \""+ d["data"]["title"] +"\"."
+    windll.kernel32.SetConsoleTitleW(windowtitle)
     player.setURL(url)
     player.play()
     return i
+
 
 def downloadAudio(d, num=None, s=Session()):
     print("Title : \t", d["data"]["title"])
@@ -278,6 +288,7 @@ def downloadAudio(d, num=None, s=Session()):
             break
         except ValueError:
             print("Please enter number")
+            pass
     print("Download :", d["data"]["audio"][i]["url"])
     path = downloadBasePath
     if not isdir(path):
@@ -296,7 +307,7 @@ def downloadAudio(d, num=None, s=Session()):
 def _console(i=None):
     global current
     if i is None:
-        i = input("bandoriplay>").split(" ")
+        i = input(console_string).split(" ")
     while "" in i:
         i.remove("")
     if len(i) == 0:
@@ -314,6 +325,7 @@ def _console(i=None):
     elif i[0].lower() in ["play", "p"]:
         if not current["set"]:
             print("Error: Please set current song.")
+            pass
         else:
             if len(i) == 1:
                 playAudio(current)
@@ -325,6 +337,7 @@ def _console(i=None):
     elif i[0].lower() in ["download", "d"]:
         if not current["set"]:
             print("Error: Please set current song.")
+            pass
         else:
             if len(i) == 1:
                 n = None
@@ -338,11 +351,24 @@ def _console(i=None):
         player.stop()
         windll.kernel32.SetConsoleTitleW(appname)
     elif i[0].lower() == "showproxy":
-        print(global_proxy)
+        print("proxy :", global_proxy)
+        pass
     elif i[0].lower() == "showurl":
         print("Status :", "set" if current["set"] else "not set")
         return
-        pprint(current["data"])
+        if current["set"]:
+            pprint(current["data"])
+            pass
+    elif i[0].lower() == "loop":
+        if len(i) <= 1:
+            player.loop = not player.loop
+            print("Loopmode :", player.loop)
+        elif i[1].lower() == "on":
+            player.loop = True
+            print("Loopmode \"Loop\"")
+        else:
+            player.loop = False
+            print("Loopmode \"no Loop\"")
     elif i[0].lower() == "clear":
         current = {"set": False, "data": {}}
     elif i[0].lower() in ["quit", "exit", "q"]:
@@ -351,6 +377,7 @@ def _console(i=None):
         return True
     else:
         print("Unknown command:", i[0])
+        pass
 
 
 def console():
