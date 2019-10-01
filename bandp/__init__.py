@@ -7,7 +7,6 @@ from os import environ
 from os.path import join, isdir, split
 from os import makedirs as mkdir
 from json import loads
-from os import system
 from sys import argv
 from sys import stderr
 import winreg
@@ -31,6 +30,7 @@ class Player():
     def __init__(self, url=None):
         self.url = url
         self.ps = None
+        self.playing = False
 
     def setURL(self, url):
         self.url = url
@@ -42,8 +42,14 @@ class Player():
     def play(self):
         if not self.url:
             return
+        if self.playing:
+            self.stop()
         self.command = "ffplay -i {} -autoexit -nodisp".format(self.url).split()
-        self.ps = Popen(self.command, stderr=DEVNULL)
+        envcopy = environ.copy()
+        if global_proxy is not None:
+            envcopy["http_proxy"] = global_proxy["http"]
+            envcopy["https_proxy"] = global_proxy["https"]
+        self.ps = Popen(self.command, stderr=DEVNULL, env=envcopy)
         self.wait = self.ps.wait
         self.playing = True
         self.waitThread = Thread(target=self.waitFunc)
@@ -150,13 +156,16 @@ def getSongInfo(url, s=Session()):
         bpm = int(_bpm)
     except AttributeError:
         try:
-            bpm = f.find("div", class_="mw-content-text").find("div", style="float:left;")\
-                .find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", "").replace(" ~ ", "-")
+            bpm = f.find("div", attrs={"id": "mw-content-text"}).find("div", style="float:left;").find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", "").replace(" ~ ", "-")
         except AttributeError:
-            bpm = "Unacquirable"
-            stderr.write("Error: BPM unacquirable.\n")
+            try:
+                bpm = f.find("div", attrs={"id": "mw-content-text"}).table.find_all("table")[-1].find_all("td")[-1].text.replace("\n", "").replace(" BPM", "").replace(" ~ ", "-")
+            except AttributeError:
+                bpm = "Unacquirable"
+                stderr.write("Error: BPM unacquirable.\n")
     except ValueError:
         bpm = _bpm
+    # print("BPM :", bpm)
     info = {
         "title": title,
         "artwork": f.find("a", class_="image-thumbnail").get("href"),
@@ -242,13 +251,13 @@ def playAudio(d, num=None):
     else:
         i = int(num)
     url = d["data"]["audio"][i]["url"]
-    print("URL :", url)
     global_proxy = _global_proxy
-    windowtitle = "Playing \""+ d["data"]["title"] +"\"."
+    windowtitle = appname + "Playing \""+ d["data"]["title"] +"\"."
     print(windowtitle)
     windll.kernel32.SetConsoleTitleW("Playing \""+ d["data"]["title"] +"\".")
     player.setURL(url)
     player.play()
+    return i
 
 def downloadAudio(d, num=None, s=Session()):
     print("Title : \t", d["data"]["title"])
@@ -286,7 +295,6 @@ def downloadAudio(d, num=None, s=Session()):
 
 def _console(i=None):
     global current
-    windll.kernel32.SetConsoleTitleW(appname)
     if i is None:
         i = input("bandoriplay>").split(" ")
     while "" in i:
@@ -357,6 +365,7 @@ def console():
 def start():
     global global_proxy
     global player
+    windll.kernel32.SetConsoleTitleW(appname)
     global_proxy = get_proxy()
     player = Player()
     console()
