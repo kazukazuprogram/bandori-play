@@ -26,6 +26,7 @@ ffplay_path = join(split(__file__)[0], ffplay_path)
 appname = "BanG Dream Music Player"
 play_legacy = False
 console_string = "bandoriplay>"
+print("ffplay path :", ffplay_path)
 
 
 class Player():
@@ -51,7 +52,7 @@ class Player():
             return
         if self.playing:
             self.stop()
-        self.command = "ffplay -i {} -nodisp -autoexit".format(self.url)
+        self.command = ffplay_path + " -i {} -nodisp -autoexit".format(self.url)
         envcopy = environ.copy()
         if global_proxy is not None:
             envcopy["http_proxy"] = global_proxy["http"]
@@ -59,7 +60,7 @@ class Player():
         if play_legacy:
             system(self.command)
         else:
-            self.ps = Popen(self.command.split(), stderr=DEVNULL, env=envcopy)
+            self.ps = Popen(self.command.split(), stdout=DEVNULL, stderr=DEVNULL, env=envcopy)
             self.wait = self.ps.wait
             self.playing = True
             self.waitThread = Thread(target=self.waitFunc)
@@ -262,7 +263,7 @@ def playAudio(d, num=None):
         i = int(num)
     url = d["data"]["audio"][i]["url"]
     global_proxy = _global_proxy
-    windowtitle = appname + " : Playing \""+ d["data"]["title"] +"\"."
+    windowtitle = appname + " : Playing \"" + d["data"]["title"] + "\"."
     windll.kernel32.SetConsoleTitleW(windowtitle)
     player.setURL(url)
     player.play()
@@ -289,7 +290,6 @@ def downloadAudio(d, num=None, s=Session()):
         except ValueError:
             print("Please enter number")
             pass
-    print("Download :", d["data"]["audio"][i]["url"])
     path = downloadBasePath
     if not isdir(path):
         mkdir(path)
