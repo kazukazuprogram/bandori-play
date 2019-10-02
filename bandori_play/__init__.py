@@ -27,7 +27,6 @@ ffplay_path = join(split(__file__)[0], ffplay_path)
 appname = "BanG Dream Music Player"
 play_legacy = False
 console_string = "bandoriplay>"
-print("ffplay path :", ffplay_path)
 
 
 class Player():
@@ -53,7 +52,8 @@ class Player():
             return
         if self.playing:
             self.stop()
-        self.command = ffplay_path + " -i {} -nodisp -autoexit".format(self.url)
+        self.command = ffplay_path + \
+            " -i {} -nodisp -autoexit".format(self.url)
         envcopy = environ.copy()
         if global_proxy is not None:
             envcopy["http_proxy"] = global_proxy["http"]
@@ -61,7 +61,8 @@ class Player():
         if play_legacy:
             system(self.command)
         else:
-            self.ps = Popen(self.command.split(), stdout=DEVNULL, stderr=DEVNULL, env=envcopy)
+            self.ps = Popen(self.command.split(), stdout=DEVNULL,
+                            stderr=DEVNULL, env=envcopy)
             self.wait = self.ps.wait
             self.playing = True
             self.waitThread = Thread(target=self.waitFunc)
@@ -84,7 +85,8 @@ def get_proxy():
             }
             print("Option  : Using proxy \"" + p + "\"")
         except IndexError:
-            print("Warning: The proxy has been disabled because the \"--proxy\" option was specified but no value was entered")
+            print("Warning: The proxy has been disabled because the"
+                  " \"--proxy\" option was specified but no value was entered")
             pass
     elif "--disable-proxy" in argv:
         return None
@@ -112,7 +114,8 @@ def get_proxy():
                 "http": p,
                 "https": p
             }
-            print("Option  : Using proxy \"" + proxy["http"] + "\" (System Setting)")
+            print("Option  : Using proxy \"" + proxy["http"]
+                  + "\" (System Setting)")
         else:
             proxy = None
     return proxy
@@ -145,7 +148,8 @@ def getSongInfo(url, s=Session()):
         audio.append({
             "title": title,
             "length": t[2].text.replace("\n", ""),
-            "url": x.find("span", class_="ogg_custom").button.get("onclick").split("rl\":\"")[1].split("\",\"")[0],
+            "url": x.find("span", class_="ogg_custom").button.get("onclick")
+            .split("rl\":\"")[1].split("\",\"")[0],
             "inst": "instrumental" in title,
             "gamever": "(Game Version)" in title
         })
@@ -164,14 +168,23 @@ def getSongInfo(url, s=Session()):
         artist = f.find(
             "div", class_="mw-content-text").p.find_all("a")[0].text
     try:
-        _bpm = f.find("div", class_="mw-content-text").find("div", style="float:left;").find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", "")
+        _bpm = f.find("div", class_="mw-content-text")
+        _bpm = _bpm.find("div", style="float:left;").find_all("table")[2].tr
+        _bpm = _bpm.find_all("td")[1].text.replace("\n", "")
+        _bpm = _bpm.replace(" BPM", "")
         bpm = int(_bpm)
     except AttributeError:
         try:
-            bpm = f.find("div", attrs={"id": "mw-content-text"}).find("div", style="float:left;").find_all("table")[2].tr.find_all("td")[1].text.replace("\n", "").replace(" BPM", "").replace(" ~ ", "-")
+            bpm = f.find("div", attrs={"id": "mw-content-text"})
+            bpm = bpm.find("div", style="float:left;").find_all("table")[2].tr
+            bpm = bpm.find_all("td")[1].text.replace("\n", "")
+            bpm = bpm.replace(" BPM", "").replace(" ~ ", "-")
         except AttributeError:
             try:
-                bpm = f.find("div", attrs={"id": "mw-content-text"}).table.find_all("table")[-1].find_all("td")[-1].text.replace("\n", "").replace(" BPM", "").replace(" ~ ", "-")
+                bpm = f.find("div", attrs={"id": "mw-content-text"}).table
+                bpm = bpm.find_all("table")[-1].find_all("td")[-1].text
+                bpm = bpm.replace("\n", "").replace(" BPM", "")
+                bpm = bpm.replace(" ~ ", "-")
             except AttributeError:
                 bpm = "Unacquirable"
                 stderr.write("Error: BPM unacquirable.\n")
@@ -398,4 +411,5 @@ def start():
     console()
 
 
-start()
+if __name__ == '__main__':
+    start()
