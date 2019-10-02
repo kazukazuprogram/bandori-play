@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-from requests import Session
-from bs4 import BeautifulSoup as bs
 from os import environ, system
 from os.path import join, isdir, split
 from os import makedirs as mkdir
@@ -14,6 +12,9 @@ from pprint import pprint
 from ctypes import windll
 from threading import Thread
 from subprocess import Popen, DEVNULL
+
+from requests import Session
+from bs4 import BeautifulSoup as bs
 
 baseurl = "https://bandori.fandom.com"
 downloadBasePath = join(environ["homepath"], "BandoriWiki")
