@@ -355,7 +355,6 @@ def _console(i=None):
         pass
     elif i[0].lower() == "showurl":
         print("Status :", "set" if current["set"] else "not set")
-        return
         if current["set"]:
             pprint(current["data"])
             pass
@@ -398,5 +397,4 @@ def start():
     console()
 
 
-if __name__ == "__main__":
-    start()
+start()
