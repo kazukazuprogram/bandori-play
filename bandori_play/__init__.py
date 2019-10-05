@@ -10,11 +10,13 @@ from sys import stderr
 import winreg
 from pprint import pprint
 from ctypes import windll
-from threading import Thread
-from subprocess import Popen, DEVNULL
 
 from requests import Session
 from bs4 import BeautifulSoup as bs
+
+from .server import Server
+from .player import Player
+from .player import Client
 
 baseurl = "https://bandori.fandom.com"
 downloadBasePath = join(environ["homepath"], "BandoriWiki")
@@ -22,57 +24,14 @@ artistCorresp = {
     "Hello, Happy World!": "ハロー、ハッピーワールド!",
     "Pastel*Palettes": "Pastel✽Palettes"
 }
-ffplay_path = join("bin", "ffplay.exe")
-ffplay_path = join(split(__file__)[0], ffplay_path)
+ffplay_path = join(split(__file__)[0], "bin", "ffplay.exe")
 appname = "BanG Dream Music Player"
 play_legacy = False
 console_string = "bandoriplay>"
 
 
-class Player():
-    def __init__(self, url=None):
-        self.url = url
-        self.ps = None
-        self.playing = False
-        self.loop = False
-
-    def setURL(self, url):
-        self.url = url
-
-    def waitFunc(self):
-        self.wait()
-        self.playing = False
-        if self.loop:
-            self.play()
-
-    def play(self, url=None):
-        if url:
-            self.setURL(url)
-        if not self.url:
-            return
-        if self.playing:
-            self.stop()
-        self.command = ffplay_path + \
-            " -i {} -nodisp -autoexit".format(self.url)
-        envcopy = environ.copy()
-        if global_proxy is not None:
-            envcopy["http_proxy"] = global_proxy["http"]
-            envcopy["https_proxy"] = global_proxy["https"]
-        if play_legacy:
-            system(self.command)
-        else:
-            self.ps = Popen(self.command.split(), stdout=DEVNULL,
-                            stderr=DEVNULL, env=envcopy)
-            self.wait = self.ps.wait
-            self.playing = True
-            self.waitThread = Thread(target=self.waitFunc)
-            self.waitThread.start()
-
-    def stop(self):
-        if not self.ps:
-            return
-        self.ps.terminate()
-        self.ps = None
+def changeWindowTitle(title):
+    windll.kernel32.SetConsoleTitleW(title)
 
 
 def get_proxy():
@@ -278,7 +237,7 @@ def playAudio(d, num=None):
     url = d["data"]["audio"][i]["url"]
     global_proxy = _global_proxy
     windowtitle = appname + " : Playing \"" + d["data"]["title"] + "\"."
-    windll.kernel32.SetConsoleTitleW(windowtitle)
+    changeWindowTitle(windowtitle)
     player.setURL(url)
     player.play()
     return i
@@ -363,7 +322,7 @@ def _console(i=None):
             downloadAudio(current, num=n)
     elif i[0].lower() == "stop":
         player.stop()
-        windll.kernel32.SetConsoleTitleW(appname)
+        changeWindowTitle(appname)
     elif i[0].lower() == "showproxy":
         print("proxy :", global_proxy)
         pass
@@ -405,9 +364,11 @@ def console():
 def start():
     global global_proxy
     global player
-    windll.kernel32.SetConsoleTitleW(appname)
+    changeWindowTitle(appname)
     global_proxy = get_proxy()
     player = Player()
+    server = Server()
+    client = Client()
     console()
 
 
