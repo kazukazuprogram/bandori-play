@@ -47,3 +47,12 @@ class Player():
             return
         self.ps.terminate()
         self.ps = None
+
+    def setURL_future(self, url):
+        pass
+
+    def stop_future(self):
+        pass
+
+    def play_future(self, url=None):
+        pass
