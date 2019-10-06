@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup as bs
 
 from .server import Server
 from .player import Player
-from .player import Client
+from .client import Client
 
 baseurl = "https://bandori.fandom.com"
 downloadBasePath = join(environ["homepath"], "BandoriWiki")
@@ -24,7 +24,6 @@ artistCorresp = {
     "Hello, Happy World!": "ハロー、ハッピーワールド!",
     "Pastel*Palettes": "Pastel✽Palettes"
 }
-ffplay_path = join(split(__file__)[0], "bin", "ffplay.exe")
 appname = "BanG Dream Music Player"
 play_legacy = False
 console_string = "bandoriplay>"
@@ -366,11 +365,11 @@ def start():
     global player
     changeWindowTitle(appname)
     global_proxy = get_proxy()
-    player = Player()
+    player = Player(proxy=global_proxy)
     server = Server()
     client = Client()
     console()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start()

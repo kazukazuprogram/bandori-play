@@ -1,5 +1,10 @@
+from os import environ, system
+from os.path import join, split
+ffplay_path = join(split(__file__)[0], "bin", "ffplay.exe")
+
+
 class Player():
-    def __init__(self, url=None):
+    def __init__(self, url=None, proxy=None):
         self.url = url
         self.ps = None
         self.playing = False
