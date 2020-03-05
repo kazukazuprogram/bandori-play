@@ -16,7 +16,8 @@ from subprocess import Popen, DEVNULL
 from requests import Session
 from bs4 import BeautifulSoup as bs
 
-baseurl = "https://bandori.fandom.com"
+# baseurl = "https://bandori.fandom.com"
+baseurl = "https://bestdori.com/"
 downloadBasePath = join(environ["homepath"], "BandoriWiki")
 artistCorresp = {
     "Hello, Happy World!": "ハロー、ハッピーワールド!",
